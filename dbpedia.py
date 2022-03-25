@@ -9,8 +9,9 @@ import pandas as pd
 from hlda.sampler import HierarchicalLDA
 from datetime import datetime
 
+from preprocessing import preprocess
 from evaluationdb import cluster_entities
-import networkx as nx
+# import networkx as nx
 
 
 
@@ -22,86 +23,14 @@ print('---------- load the data ----------')
 # load the labels for evaluation
 reference_data = pd.read_csv('data/dbpedia/classes.txt', delimiter = '\t')
 subjects = set(raw_data[:,0])
+# check if 
 for i in range(len(reference_data)):
     tmpt = reference_data.subject[i]
     if tmpt not in subjects:
         reference_data = reference_data.drop(i)
 
-# preprocessing to get the documents and set of relation and tail       
-relation_list = []
-all_doc = []
-vocab = set()
-all_tail_doc = []
-tail_vocab = set()
-new_data = []
-
-for s in reference_data.subject:
-    if (raw_data[:,0] == s).any():
-        index = np.where(raw_data[:,0]==s)[0]
-        new_doc = []
-        new_tail_doc = []
-        new_data.append(raw_data[index])
-    
-        for i in index:
-            new_doc.append(raw_data[i,1])
-            new_tail_doc.append(raw_data[i,2])
-    
-    #         print(raw_data[i,1])
-    #         print(raw_data[i,0])
-        all_doc.append(new_doc)
-        all_tail_doc.append(new_tail_doc)
-        vocab.update(new_doc)
-        tail_vocab.update(new_tail_doc)
-
-
-vocab = sorted(list(vocab))
-tail_vocab = sorted(list(tail_vocab))
-
-print(vocab[0:10])
-vocab_index = {}
-for i, w in enumerate(vocab):
-    vocab_index[w] = i
-    
-tail_vocab_index = {}
-for i, w in enumerate(tail_vocab):
-    tail_vocab_index[w] = i
-
-# get the corpus of relation and tail    
-new_corpus = []
-for doc in all_doc:
-    new_doc = []
-    for word in doc:
-        word_idx = vocab_index[word]
-        new_doc.append(word_idx)
-    new_corpus.append(new_doc)
-
-tail_corpus = []
-for doc in all_tail_doc:
-    new_doc = []
-    for word in doc:
-        word_idx = tail_vocab_index[word]
-        new_doc.append(word_idx)
-    tail_corpus.append(new_doc)
-print(len(tail_corpus))
-print(len(tail_vocab))
-for i in range(len(new_corpus)):
-    if len(new_corpus[i]) != len(tail_corpus[i]):
-        print('ss')
-
-# get the all new triples facts 
-new_data_df = pd.DataFrame()
-for i in range(len(new_data)):
-    temp = pd.DataFrame(new_data[i])
-    new_data_df = new_data_df.append(temp,ignore_index=True)
-print(new_data_df)
-
-# get the all entities
-union_list = list(set().union(tail_vocab, list(reference_data.subject.values)))
-print(len(union_list))
-intersection_set = set.intersection(set(tail_vocab), set(list(reference_data.subject.values)))
-intersection_list = list(intersection_set)
-print(len(intersection_list))
-# print(data)
+# preprocessing to get the all corpus and set of relation and tail
+new_corpus, tail_corpus, vocab, tail_vocab = preprocess(raw_data, reference_data)
 
 # hyper-parameter setting
 n_samples = 100  #1000    # no of iterations for the sampler
@@ -160,10 +89,10 @@ for iteration in range(5):
     results_customers_id = hlda.results_customers
     results_customers_labels = hlda.labels
 
-    g = nx.DiGraph()
-    for i in range(len(results_customers_labels)):
-        g.add_node(results_customers_labels[i][0], label=results_customers_labels[i][1], shape='circle')
-    g.add_edges_from(results_customers_id)
-    p = nx.drawing.nx_pydot.to_pydot(g)
-    p.write_png('results/5_level_results_customers_{0}_{1}_{2}_{3}_{4}_{5}.png'.format(iteration,alpha,gamma,eta, eta_tail,NMI))
+    # g = nx.DiGraph()
+    # for i in range(len(results_customers_labels)):
+    #     g.add_node(results_customers_labels[i][0], label=results_customers_labels[i][1], shape='circle')
+    # g.add_edges_from(results_customers_id)
+    # p = nx.drawing.nx_pydot.to_pydot(g)
+    # p.write_png('results/5_level_results_customers_{0}_{1}_{2}_{3}_{4}_{5}.png'.format(iteration,alpha,gamma,eta, eta_tail,NMI))
     # p.write_pdf('results/5_level_results_customers_{}.pdf'.format(iteration))
